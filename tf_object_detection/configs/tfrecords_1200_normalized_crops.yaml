@@ -1,0 +1,33 @@
+# Creating cropped and if needed, scaled tfrecords
+#
+# This one randomly crops samples out of the image without resizing
+# Images are normalized
+
+crop_input_width: 1200
+crop_input_height: 1200
+
+crop_output_width: 1200
+crop_output_height: 1200
+
+crops_per_image: 5
+
+vehicle_crop_size: 256
+min_crop_width: 25  # for classification
+min_crop_height: 15
+
+min_width: 25
+min_height: 25
+
+# TODO configure paths
+train_labels_json: '/TODO/boxy/boxy_labels_train.json'
+valid_labels_json: '/TODO/boxy/boxy_labels_valid.json'
+test_labels_json: '/TODO/boxy/boxy_labels_test.json'
+image_folder : '/TODO/boxy/processed_data/enhanced_images'
+image_format: 'png'  # png or jpg
+
+tfrecords_folder: '/TODO/processed_data/tfrecords/enhanced_1200_256_2'
+
+divided: false
+train_tfrecords : 'complete_train.tfrecords'
+valid_tfrecords : 'complete_valid.tfrecords'
+test_tfrecords : 'complete_test.tfrecords'
