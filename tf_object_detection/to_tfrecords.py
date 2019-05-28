@@ -154,7 +154,7 @@ def create_datasets(tfrecords_config_path, max_valid):
         valid_labels,
         os.path.join(config['tfrecords_folder'], config['valid_tfrecords']),
         config,
-        config['max_valid'])
+        max_valid)
 
     # TODO Could create tfrecords without label information, only images
     if 'test_labels_json' in config and config['test_labels_json']:
