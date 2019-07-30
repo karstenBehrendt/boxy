@@ -24,26 +24,22 @@ def filter_small_objects(labels, min_side_length):
     min_side_length : scalar
                       minimum width and height for each object
     """
-    box_counter = 0
-    polygon_counter = 0
+    vehicle_counter = 0
     for image_label in tqdm.tqdm(labels.values(), desc='Filtering too small objects'):
-        remove_boxes = []
-        for i, box in enumerate(image_label['boxes']):
-            if box['height'] < min_side_length or box['width'] < min_side_length:
-                remove_boxes.append(i)
-                box_counter += 1
-        for i in reversed(remove_boxes):
-            del image_label['boxes'][i]
+        remove_vehicles = []
+        for i, vehicle in enumerate(image_label['vehicles']):
+            height = vehicle['AABB']['y2'] - vehicle['AABB']['y1']
+            width = vehicle['AABB']['x2'] - vehicle['AABB']['x1']
+            assert height > 0, 'label file corrupt, entries not ordered'
+            assert width > 0, 'label file corrupt, entries not ordered'
+            if height < min_side_length or width < min_side_length:
+                remove_vehicles.append(i)
+                vehicle_counter += 1
 
-        remove_polygons = []
-        for i, polygon in enumerate(image_label['polygons']):
-            if polygon['bb'][2] < min_side_length or polygon['bb'][3] < min_side_length:
-                remove_polygons.append(i)
-                polygon_counter += 1
-        for i in reversed(remove_polygons):
-            del image_label['polygons'][i]
+        for i in reversed(remove_vehicles):
+            del image_label['vehicles'][i]
 
-    print('Removed {} boxes and {} polygons'.format(box_counter, polygon_counter))
+    print('Removed {} vehicles'.format(vehicle_counter))
 
 
 def filter_labels(input_labels, output_labels, min_side_length):
