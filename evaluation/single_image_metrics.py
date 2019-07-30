@@ -34,8 +34,7 @@ def __debug_view(detections, targets):
 
 def _target_to_aabb_polygons(target):
     """ Transforms target AABB into 4 point polygons
-    There are AABB for rears and for complete vehicles.
-    Those are moved into:
+    The vehicle AABB representation is transformed into:
         ((xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax))
 
     Parameters
@@ -47,22 +46,13 @@ def _target_to_aabb_polygons(target):
         list of AABB as polygons defined by 4 points
     """
     boxes = []
-    for box in target['boxes']:
+    for box in target['vehicles']:
+        box = box['AABB']
         aabb = [
-            (box['x'], box['y']),
-            (box['x'] + box['width'], box['y']),
-            (box['x'] + box['width'], box['y'] + box['height']),
-            (box['x'], box['y'] + box['height'])
-        ]
-        boxes.append(aabb)
-
-    for box in target['polygons']:
-        box = box['bb']
-        aabb = [
-            (box[0], box[1]),
-            (box[0] + box[2], box[1]),
-            (box[0] + box[2], box[1] + box[3]),
-            (box[0], box[1] + box[3])
+            (box['x1'], box['y1']),
+            (box['x2'], box['y1']),
+            (box['x2'], box['y2']),
+            (box['x1'], box['y2'])
         ]
         boxes.append(aabb)
     return boxes
@@ -81,7 +71,7 @@ def _prediction_to_aabb_polygons(prediction):
         list of AABBs defined by 4 points (8 values)
     """
     boxes = []
-    for box in prediction['detection_boxes']:  # [0] if directly from tf detection api
+    for box in prediction['detection_boxes']:
         aabb = [
             (box[1] * constants.WIDTH, box[0] * constants.HEIGHT),
             (box[3] * constants.WIDTH, box[0] * constants.HEIGHT),
@@ -121,7 +111,7 @@ def match_aabb_aabb(prediction, target, threshold):
     # assumes boxes sorted by decreasing probability
 
     boxes = _prediction_to_aabb_polygons(prediction)
-    scores = prediction['detection_scores']  # [0] if directly from tf detection api
+    scores = prediction['detection_scores']
     target_boxes = _target_to_aabb_polygons(target)
 
     results = matching_results(boxes, scores, target_boxes, threshold)

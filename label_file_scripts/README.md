@@ -43,3 +43,6 @@ Sample (incomplete) annotation:
                         'p2': {'x': 374.0400085449219, 'y': 1059.3299560546875},
                         'p3': {'x': 374.0400085449219, 'y': 1551.8299560546875}}}]}
 ```
+
+Objects smaller than 15x15 pixels (< 0.004 percent of the image) are not reliably annotated.
+The x and y values are based on the full resolution images, i.e., 2464 x 2056.

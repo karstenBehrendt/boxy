@@ -57,6 +57,7 @@ def create_tf_object_detection_tfrecords(
     See the config README.md and make sure it is configured as intended
     It specifies resolutions, cropping, and samples/crops per image
     """
+    # TODO Add sharding
     # (Incomplete) config check
     mandatory_config_params = ['crop_input_width', 'crop_output_height', 'image_format', 'image_folder']
     assert all(
@@ -194,6 +195,7 @@ def parse_args():
 
 
 if __name__ == '__main__':
+    raise NotImplementedError('File does not reflect updated label format yet!')
     ARGS = parse_args()
     if ARGS['create']:
         create_datasets(ARGS['config'], ARGS['max_valid'])

@@ -33,11 +33,11 @@ def __count_annotation_objects(result_list, min_size):
 def average_precisions(results):
     areas = {
         'all': (0, 3000**2),
-        'resonable': (15, 3000**2),
+        'resonable': (15**2, 3000**2),
         'tiny': (0, 15**2),
-        'small': (15, 32**2),
-        'medium': (32, 96**2),
-        'large': (96, 3000**2)
+        'small': (15**2, 32**2),
+        'medium': (32**2, 96**2),
+        'large': (96**2, 3000**2)
     }
 
     detections = [result for result in results if (result.type == 'tp' or result.type == 'fp')]
