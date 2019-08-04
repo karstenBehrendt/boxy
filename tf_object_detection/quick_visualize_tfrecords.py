@@ -15,7 +15,7 @@ import tensorflow as tf
 from athena_ml.helper_scripts.int_round import ir
 
 
-def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, debug_info=False):
+def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, debug_info=True):
     """ Visual inspection if values and images look reasonable
     This does not replace an actual inspection of the data, e.g. counting the samples.
     Press q to quit. Any other key to show the next sample.
@@ -64,6 +64,7 @@ def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, d
             ymin = example.features.feature['image/object/bbox/ymin'].float_list.value
             ymax = example.features.feature['image/object/bbox/ymax'].float_list.value
             class_ids = example.features.feature['image/object/class/label'].int64_list.value
+            class_texts = example.features.feature['image/object/class/text'].bytes_list.value[0]
 
             if image_format.decode('utf-8') == 'png':
                 image = tf.image.decode_png(image, channels=3).eval()
@@ -96,6 +97,7 @@ def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, d
                 print('ymax', list(map(lambda x: x * image.shape[0], ymax)))
                 print('#####')
                 print('classes', class_ids)
+                print('classes', class_texts)
                 print('#####')
 
             cv2.imshow('image', cv2.resize(image, (1920, 1280)))
