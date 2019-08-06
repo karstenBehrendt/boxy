@@ -27,7 +27,7 @@ def check_missing_aabb(labels):
     counter = 0
     for key, label in labels.items():
         for vehicle in label['vehicles']:
-            if 'AABB' not in vehicle:
+            if 'AABB' not in vehicle or vehicle['AABB'] is None:
                 counter += 1
 
     print('Found', counter, 'instances of missing AABB')

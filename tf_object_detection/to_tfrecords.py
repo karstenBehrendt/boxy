@@ -14,28 +14,185 @@ The script can easily run a day depending on the given image resolutions.
 Sample usage:
     python to_tfrecords.py --create --config path_to_some_config_file
 """
+# NOTE Can be cleaned up
 
 import argparse
 import json
+import hashlib
 import os
 from random import shuffle, randint
 
 import cv2
+from object_detection.utils import dataset_util
 import tensorflow as tf
 import tqdm
 import yaml
 
-from boxy.tf_object_detection.sample_data import SampleData
 from boxy.common import constants
+
+
+def clip_float(value):
+    """Clips value to a range of [0,1]"""
+    return min(1, max(value, 0))
+
+
+class SampleData:
+    """ Container to modify labels for cropping and resizing
+
+    Scripts to crop and resize image parts.
+    Annotations are adapted accordingly
+
+    E.g. crop regions of (1200, 1200) from the image and resize the crop
+     to (600, 600) to select the size of the crop and zoom level.
+     Allows multiple crops per image.
+     """
+
+    def __init__(self, image, key, config, crop_number):
+        self.image = image
+        self.image_id = key
+        self.image_crop_id = key + str(crop_number)
+        self.image_path = key
+
+        self.out_width = config['crop_output_width']
+        self.out_height = config['crop_output_height']
+        self.in_width = config['crop_input_width']
+        self.in_height = config['crop_input_height']
+        # labels are annotated relative to image size, minimum size is scaled to that
+        self.min_box_width = float(config['min_width']) / float(self.out_width)
+        self.min_box_height = float(config['min_height']) / float(self.out_height)
+        self.image_format = config['image_format']
+
+        self.input_crop_min_x = None
+        self.input_crop_max_x = None
+        self.input_crop_min_y = None
+        self.input_crop_max_y = None
+
+        self.xmin = []
+        self.xmax = []
+        self.ymin = []
+        self.ymax = []
+
+    def _coordinate_value_lists(self):
+        return [self.xmin, self.xmax, self.ymin, self.ymax]
+
+    def map_x_values(self, mapping):
+        self.xmin = list(map(mapping, self.xmin))
+        self.xmax = list(map(mapping, self.xmax))
+
+    def map_y_values(self, mapping):
+        self.ymin = list(map(mapping, self.ymin))
+        self.ymax = list(map(mapping, self.ymax))
+
+    def get_bbox_values(self, labels):
+        for vehicle in labels[self.image_id]['vehicles']:
+            aabb = vehicle['AABB']
+            xmin = aabb['x1']
+            xmax = aabb['x2']
+            ymin = aabb['y1']
+            ymax = aabb['y2']
+            for container_list, value in zip(self._coordinate_value_lists(),
+                                             [xmin, xmax, ymin, ymax]):
+                container_list.append(value)
+
+    def transform_annotations(self, crop_window):
+        """ Transforms annotations based on crop_window """
+        self.input_crop_min_x = crop_window['min_x']
+        self.input_crop_max_x = crop_window['max_x']
+        self.input_crop_min_y = crop_window['min_y']
+        self.input_crop_max_y = crop_window['max_y']
+
+        # translate
+        self.map_x_values(lambda x: x - self.input_crop_min_x)
+        self.map_y_values(lambda x: x - self.input_crop_min_y)
+
+        # scale / normalize to crop area
+        self.map_x_values(lambda x: x / float(self.in_width))
+        self.map_y_values(lambda x: x / float(self.in_height))
+
+        # cut annotations to [0,1] if objects extend outside the crop
+        self.map_x_values(clip_float)
+        self.map_y_values(clip_float)
+
+    def filter_too_small_annotations(self):
+        """Filters too small boxes after scaling
+
+        Parameters
+        ----------
+        min_width : float, in pixels
+        min_height: float, in pixels
+
+        Notes
+        -----
+        This function needs to be run! By changing resolutions, boxes may become too small
+        which may lead to rounded zero-areas in tf object_detection which may in turn
+        crash or silently introduce issues
+        """
+
+        remove_list = []
+        for i in range(len(self.xmin)):
+            if (self.xmax[i] - self.xmin[i]) < self.min_box_width or\
+               (self.ymax[i] - self.ymin[i]) < self.min_box_height:
+                remove_list.append(i)
+
+        for i in reversed(remove_list):
+            del self.xmin[i]
+            del self.xmax[i]
+            del self.ymin[i]
+            del self.ymax[i]
+
+    def check_for_one_annotation(self):
+        # returns True if at least one annotation is fully visible, returns false if not
+        # NOTE This may have unintended side-effects
+
+        def not_zero_one(value):
+            # input is [0,1]
+            return 0.0 < value < 1.0
+
+        if not self.xmin:  # no boxes at all
+            return False
+        for bbox in zip(*self._coordinate_value_lists()):
+            # If none of the bounding box values are zero or one, the box is completely in the image
+            # NOTE, no large cars at the border of the image may come into the tfrecord of the crop size
+            if all(map(not_zero_one, bbox)):
+                return True
+        return False
+
+    def basic_checks(self, ):
+        # Verify length of all arrays, content is harder
+        # For content checks, split function into separate parts and test indivually
+        assert all(len(array) == len(self.xmin) for array in self._coordinate_value_lists())
+        assert all([0.0 <= value <= 1.0 for value_list in self._coordinate_value_lists() for value in value_list])
+
+    def write_to_tfrecord(self, tfrecord_writer):
+        image = cv2.resize(self.image, (self.out_width, self.out_height))
+        ret_val, image = cv2.imencode('.png', image)
+        image = image.tostring()
+        sha256 = hashlib.sha256(image).hexdigest()
+        complete_example = tf.train.Example(features=tf.train.Features(feature={
+            'image/height': dataset_util.int64_feature(self.out_height),
+            'image/width': dataset_util.int64_feature(self.out_width),
+            'image/filename': dataset_util.bytes_feature(self.image_path.encode('utf8')),
+            'image/encoded': tf.train.Feature(bytes_list=tf.train.BytesList(value=[image])),
+            'image/format': dataset_util.bytes_feature(self.image_format.encode('utf8')),
+            'image/source_id': dataset_util.bytes_feature(self.image_crop_id.encode('utf8')),
+            'image/key/sha256': dataset_util.bytes_feature(sha256.encode('utf8')),
+            'image/object/bbox/xmin': dataset_util.float_list_feature(self.xmin),
+            'image/object/bbox/xmax': dataset_util.float_list_feature(self.xmax),
+            'image/object/bbox/ymin': dataset_util.float_list_feature(self.ymin),
+            'image/object/bbox/ymax': dataset_util.float_list_feature(self.ymax),
+            'image/object/class/text': dataset_util.bytes_list_feature(
+                ['complete'.encode('utf8')] * len(self.xmin)),
+            'image/object/class/label': dataset_util.int64_list_feature(
+                [1] * len(self.xmin)),
+        }))
+        tfrecord_writer.write(complete_example.SerializeToString())
 
 
 def create_tf_object_detection_tfrecords(
         labels, tfrecord_file, config, max_samples=0):
     """ Creates a tfrecord dataset split specific to tf's objection_detection module
     The created dataset is stored to file and may take up to a TB of space.
-    Complete in this context means that bounding boxes fully capture each object.
-    The divided files split sides and rears into separate boxes.
-    All tfrecords only contain axis-aligned bounding boxes!
+    The tfrecords only contain axis-aligned bounding boxes!
 
     Parameter
     ---------
@@ -96,7 +253,7 @@ def create_tf_object_detection_tfrecords(
                 sd = SampleData(
                     image=original_image[crop_window['min_y']:crop_window['max_y'],
                                          crop_window['min_x']:crop_window['max_x']],
-                    key=key, divided=config['divided'], config=config, crop_number=crop_num)
+                    key=key, config=config, crop_number=crop_num)
                 sd.get_bbox_values(labels)
                 sd.transform_annotations(crop_window)
                 sd.filter_too_small_annotations()
@@ -195,7 +352,6 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    raise NotImplementedError('File does not reflect updated label format yet!')
     ARGS = parse_args()
     if ARGS['create']:
         create_datasets(ARGS['config'], ARGS['max_valid'])
