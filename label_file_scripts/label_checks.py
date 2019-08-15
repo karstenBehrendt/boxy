@@ -10,7 +10,63 @@ Think of this as a growing unit test for data.
 import argparse
 import json
 
-import tqdm
+from boxy.common import constants
+
+
+def check_out_of_bounds(labels):
+    """Checks for out of bound annotations (partially outside of image)
+
+    Parameters
+    ----------
+    labels : dict
+             loaded content of annotation file
+
+    Note
+    ----
+    Was fixed August 20, 2019
+    """
+    vehicle_counter = 0
+    for image_label in labels.values():
+        for i, vehicle in enumerate(image_label['vehicles']):
+            # Not using min/max to be able to count occurances
+            oob = False
+
+            # # AABB
+            if vehicle['AABB']['x1'] < 0:
+                oob = True
+            if vehicle['AABB']['y1'] < 0:
+                oob = True
+            if vehicle['AABB']['x2'] > constants.WIDTH:
+                oob = True
+            if vehicle['AABB']['y2'] > constants.HEIGHT:
+                oob = True
+
+            # # rear
+            if vehicle['rear'] is not None:
+                if vehicle['rear']['x1'] < 0:
+                    oob = True
+                if vehicle['rear']['y1'] < 0:
+                    oob = True
+                if vehicle['rear']['x2'] > constants.WIDTH:
+                    oob = True
+                if vehicle['rear']['y2'] > constants.HEIGHT:
+                    oob = True
+
+            # # side
+            if vehicle['side'] is not None:
+                for point in vehicle['side'].keys():
+                    if vehicle['side'][point]['x'] < 0:
+                        oob = True
+                    if vehicle['side'][point]['y'] < 0:
+                        oob = True
+                    if vehicle['side'][point]['x'] > constants.WIDTH:
+                        oob = True
+                    if vehicle['side'][point]['y'] > constants.HEIGHT:
+                        oob = True
+            if oob:
+                vehicle_counter += 1
+    print('Found', vehicle_counter, 'annotations that are out of image bounds')
+
 
 def check_missing_aabb(labels):
     """Checks for missing AABB in all labels
@@ -33,7 +89,6 @@ def check_missing_aabb(labels):
     print('Found', counter, 'instances of missing AABB')
 
 
-
 def check_labels(input_labels):
     """ Reads a label file, filters annotations by size, and creates
     a new one
@@ -46,7 +101,8 @@ def check_labels(input_labels):
     with open(input_labels, 'r') as input_handle:
         labels = json.load(input_handle)
 
-    check_missing_aabb(labels)  # in-place manipulation!
+    check_missing_aabb(labels)
+    check_out_of_bounds(labels)
 
 
 def parse_args():
