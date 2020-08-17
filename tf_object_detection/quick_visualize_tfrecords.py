@@ -12,8 +12,6 @@ import sys
 import cv2
 import tensorflow as tf
 
-from athena_ml.helper_scripts.int_round import ir
-
 
 def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, debug_info=True):
     """ Visual inspection if values and images look reasonable
@@ -82,10 +80,10 @@ def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, d
 
             for box in range(len(xmin)):
                 cv2.rectangle(image,
-                              (ir(xmin[box] * width),
-                               ir(ymin[box] * height)),
-                              (ir(xmax[box] * width),
-                               ir(ymax[box] * height)),
+                              (int(round(xmin[box] * width)),
+                               int(round(ymin[box] * height))),
+                              (int(round(xmax[box] * width)),
+                               int(round(ymax[box] * height))),
                               (0, 255, 0),
                               3)
 
