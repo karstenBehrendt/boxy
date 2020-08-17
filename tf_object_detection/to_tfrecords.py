@@ -226,7 +226,7 @@ def create_tf_object_detection_tfrecords(
     keys = list(labels.keys())
     shuffle(keys)
 
-    with tf.python_io.TFRecordWriter(tfrecord_file) as tfrecord_writer:
+    with tf.io.TFRecordWriter(tfrecord_file) as tfrecord_writer:
         for i, key in tqdm.tqdm(enumerate(keys), total=len(labels),
                                 desc='Creating a tfrecord file'):
             base_path = key
@@ -292,7 +292,7 @@ def create_datasets(tfrecords_config_path, max_valid):
 
     # Quick config check
     with open(tfrecords_config_path, 'r') as config_handle:
-        config = yaml.load(config_handle)
+        config = yaml.load(config_handle, Loader=yaml.SafeLoader)
     mandatory_params = ['tfrecords_folder', 'train_tfrecords', 'valid_tfrecords']
     assert all([mp in list(config.keys()) for mp in mandatory_params])
 
