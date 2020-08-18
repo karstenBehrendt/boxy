@@ -45,8 +45,8 @@ def visual_inspection(tfrecords_path, min_height=0, min_width=0, classes=None, d
         classes = [0, 1]
 
     # TODO Deprecated. Should be replaced.
-    record_iterator = tf.python_io.tf_record_iterator(tfrecords_path)
-    with tf.Session():
+    record_iterator = tf.compat.v1.io.tf_record_iterator(tfrecords_path)
+    with tf.compat.v1.Session():
         for record_id, record in enumerate(record_iterator):
             print(record_id)
 
