@@ -23,7 +23,10 @@ import os
 from random import shuffle, randint
 
 import cv2
-from object_detection.utils import dataset_util
+# https://github.com/tensorflow/models/research needs to be on PYTHONPATH
+# Those directories were reorganized after I wrote this script
+# Alternatively: from models.research.object_detection_utils import dataset_util
+from object_detection.utils import dataset_util  # models/research on PYTHONPATH
 import tensorflow as tf
 import tqdm
 import yaml
