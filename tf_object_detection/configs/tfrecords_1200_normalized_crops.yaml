@@ -3,18 +3,27 @@
 # This one randomly crops samples out of the image without resizing
 # Images are normalized
 
+
+# The script takes random crops of this size from the original images
+# The original images have an input size of 2464x2056 and out of those
+# we randomly sample crops of the following size
 crop_input_width: 1200
 crop_input_height: 1200
 
+# The randomly sampled crops are then resized according to the following specs
+# In this example, the crops are not scaled at all.
 crop_output_width: 1200
 crop_output_height: 1200
 
+# Since the crops are randomly sampled accross the image, we can take multiple crops
 crops_per_image: 5
 
+# Specs for the classification tfrecords. Not used for detection
 vehicle_crop_size: 256
 min_crop_width: 25  # for classification
 min_crop_height: 15
 
+# Only labels larger than the following are used within the detector training
 min_width: 25
 min_height: 25
 
@@ -27,7 +36,7 @@ image_format: 'png'  # png or jpg
 
 tfrecords_folder: '/TODO/processed_data/tfrecords/enhanced_1200_256_2'
 
-divided: false
+divided: alse
 train_tfrecords : 'complete_train.tfrecords'
 valid_tfrecords : 'complete_valid.tfrecords'
 test_tfrecords : 'complete_test.tfrecords'
