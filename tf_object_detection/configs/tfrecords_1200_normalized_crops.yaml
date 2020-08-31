@@ -16,6 +16,8 @@ crop_output_width: 1200
 crop_output_height: 1200
 
 # Since the crops are randomly sampled accross the image, we can take multiple crops
+# Set this to 1 if your crop_input_width equals 2464x2056 (the raw images). You don't
+# want 5 copies of the same image :)
 crops_per_image: 5
 
 # Specs for the classification tfrecords. Not used for detection
@@ -24,6 +26,9 @@ min_crop_width: 25  # for classification
 min_crop_height: 15
 
 # Only labels larger than the following are used within the detector training
+# After cropping and scaling. I.e., you probably only want reasonably sized
+# labels  depending on detector and image size. For example, your SSD with 320x320
+# input pixels won't detect a one pixel car.
 min_width: 25
 min_height: 25
 
