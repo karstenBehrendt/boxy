@@ -1,10 +1,6 @@
-"""
-Random scripts that just don't fit anywhere
-"""
+"""Random scripts that just don't fit anywhere"""
 
 import os
-
-from unsupervised_llamas.label_scripts import dataset_constants
 
 
 def get_files_from_folder(directory, extension=None):
@@ -31,19 +27,21 @@ def get_labels(split='test'):
     return label_paths
 
 
+def tir(some_values):
+    """Returns tuple of rounded values"""
+    return tuple([ir(value) for value in values])
+
+
 def ir(some_value):
     """ Rounds and casts to int
     Useful for pixel values that cannot be floats
-
     Parameters
     ----------
     some_value : float
                  numeric value
-
     Returns
     --------
     Rounded integer
-
     Raises
     ------
     ValueError for non scalar types
