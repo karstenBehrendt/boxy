@@ -40,7 +40,7 @@ def main():
     dataset_valid = BoxyDataset("/media/karsten/data_disk/boxy/boxy_images_raw", get_transforms(), constants.VALID_LABEL_FILE)
 
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=2, shuffle=True, num_workers=4,
+        dataset, batch_size=4, shuffle=True, num_workers=4,
         collate_fn=utils.collate_fn)
     data_loader_valid = torch.utils.data.DataLoader(
         dataset_valid, batch_size=1, shuffle=False, num_workers=4,
@@ -61,8 +61,9 @@ def main():
         train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
         lr_scheduler.step()
         evaluate(model, data_loader_valid, device=device)
+        torch.save(model, f"{epoch}_trained.pkl")
 
-    print("That's it!")
+    print("Done training")
 
 
 if __name__ == "__main__":
