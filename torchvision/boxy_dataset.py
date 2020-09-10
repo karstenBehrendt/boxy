@@ -35,16 +35,18 @@ class BoxyDataset(object):
         img = Image.open(img_path).convert("RGB")
         label = self.labels[self.id_path_map[idx]]
 
-        if img.size != (2464, 2056):
-            print("Boxes need to be scaled" + str(img.size))
-            raise NotImplementedError("Boxes need to be scaled" + str(img.size))
-
         # get bounding box coordinates for each mask
         num_objs = len(label["vehicles"])
         boxes = []
         area = torch.FloatTensor([])
         for vehicle in label["vehicles"]:
             aabb = vehicle["AABB"]
+            if img.size != (2464, 2056):  # Should use image constants instead
+                aabb["x1"] = aabb["x1"] / 2464 * img.size[0]
+                aabb["x2"] = aabb["x2"] / 2464 * img.size[0]
+                aabb["y1"] = aabb["y1"] / 2056 * img.size[1]
+                aabb["y2"] = aabb["y2"] / 2056 * img.size[1]
+
             boxes.append([aabb["x1"], aabb["y1"], aabb["x2"], aabb["y2"]])
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
